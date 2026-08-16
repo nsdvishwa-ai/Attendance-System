@@ -2,7 +2,7 @@ FROM python:3.10-slim
 
 WORKDIR /app
 
-# Install system dependencies for OpenCV and GUI support
+# Install runtime dependencies for OpenCV
 RUN apt-get update && apt-get install -y \
     build-essential \
     cmake \
@@ -10,15 +10,17 @@ RUN apt-get update && apt-get install -y \
     libglib2.0-0 \
     && rm -rf /var/lib/apt/lists/*
 
-# Install pre-built dlib wheel to skip compilation completely
-RUN pip install --no-cache-dir https://github.com/z-a-n-i/dlib-wheels/raw/main/dlib-19.24.1-cp310-cp310-linux_x86_64.whl
+# Install pre-compiled binary dlib
+RUN pip install --no-cache-dir dlib-bin
 
 COPY requirements.txt .
-# Remove 'dlib' from requirements.txt if present so it doesn't try to reinstall it
 RUN pip install --no-cache-dir -r requirements.txt
+
+# Install face_recognition without pulling standard dlib dependency
+RUN pip install --no-cache-dir face_recognition --no-deps
 
 COPY . .
 
-EXPOSE 8000
+ENV PYTHONPATH=/app
 
 CMD uvicorn backend.app.main:app --host 0.0.0.0 --port ${PORT:-8000}
