@@ -10,7 +10,7 @@ export default function App() {
   const [status, setStatus] = useState("Idle");
   const [autoScan, setAutoScan] = useState(false);
   const [isCameraOn, setIsCameraOn] = useState(false);
-  const [activeTab, setActiveTab] = useState("logs"); // 'logs', 'register', or 'reports'
+  const [activeTab, setActiveTab] = useState("scanner"); // Default to public scanner
 
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
@@ -18,8 +18,8 @@ export default function App() {
   const autoScanInterval = useRef(null);
 
   useEffect(() => {
-    if (token) fetchLogs();
-  }, [token]);
+    fetchLogs();
+  }, []);
 
   // Handle auto scanning timer
   useEffect(() => {
@@ -35,10 +35,7 @@ export default function App() {
 
   const fetchLogs = async () => {
     try {
-      const res = await fetch(`${API_BASE_URL}/admin/logs`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (res.status === 401) return handleLogout();
+      const res = await fetch(`${API_BASE_URL}/admin/logs`);
       const data = await res.json();
       setLogs(data);
     } catch (err) {
@@ -48,9 +45,7 @@ export default function App() {
 
   const handleExportCSV = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/admin/export-csv`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await fetch(`${API_BASE_URL}/admin/export-csv`);
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -63,9 +58,9 @@ export default function App() {
   };
 
   const handleLogout = () => {
-    stopCamera();
     localStorage.removeItem("token");
     setToken(null);
+    setActiveTab("scanner");
   };
 
   const startCamera = async () => {
@@ -117,7 +112,6 @@ export default function App() {
         });
         const data = await response.json();
 
-        // Clear status when face leaves, otherwise show exact backend status
         if (data.status === "No face detected") {
           setStatus("Searching for face...");
         } else {
@@ -133,117 +127,137 @@ export default function App() {
     }, "image/jpeg");
   };
 
-  if (!token) {
-    return <Login onLoginSuccess={(newToken) => setToken(newToken)} />;
-  }
-
   return (
     <div style={{ padding: "2rem", fontFamily: "sans-serif", maxWidth: "1200px", margin: "0 auto" }}>
       <header style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "2px solid #eee", paddingBottom: "1rem" }}>
-        <h2>Attendance Control Center</h2>
+        <h2>Attendance System</h2>
         <div>
           <button 
-            onClick={() => setActiveTab("logs")} 
-            style={{ marginRight: "10px", fontWeight: activeTab === "logs" ? "bold" : "normal" }}
+            onClick={() => setActiveTab("scanner")} 
+            style={{ marginRight: "10px", fontWeight: activeTab === "scanner" ? "bold" : "normal", padding: "6px 12px", cursor: "pointer" }}
           >
-            Dashboard
+            Mark Attendance
           </button>
           <button 
-            onClick={() => setActiveTab("register")} 
-            style={{ marginRight: "10px", fontWeight: activeTab === "register" ? "bold" : "normal" }}
+            onClick={() => setActiveTab("logs")} 
+            style={{ marginRight: "10px", fontWeight: activeTab === "logs" ? "bold" : "normal", padding: "6px 12px", cursor: "pointer" }}
           >
-            Register Student
+            Dashboard Logs
           </button>
           <button 
             onClick={() => setActiveTab("reports")} 
-            style={{ marginRight: "20px", fontWeight: activeTab === "reports" ? "bold" : "normal" }}
+            style={{ marginRight: "10px", fontWeight: activeTab === "reports" ? "bold" : "normal", padding: "6px 12px", cursor: "pointer" }}
           >
-            Reports & Analytics
+            Reports
           </button>
-          <button onClick={handleLogout} style={{ background: "#ff4d4d", color: "#fff", border: "none", padding: "6px 12px", borderRadius: "4px", cursor: "pointer" }}>
-            Logout
+          <button 
+            onClick={() => setActiveTab("register")} 
+            style={{ marginRight: "20px", fontWeight: activeTab === "register" ? "bold" : "normal", padding: "6px 12px", cursor: "pointer" }}
+          >
+            Register Student {token ? "(Admin)" : "(🔒)"}
           </button>
+
+          {token ? (
+            <button onClick={handleLogout} style={{ background: "#ff4d4d", color: "#fff", border: "none", padding: "6px 12px", borderRadius: "4px", cursor: "pointer" }}>
+              Logout
+            </button>
+          ) : (
+            <button onClick={() => setActiveTab("register")} style={{ background: "#007bff", color: "#fff", border: "none", padding: "6px 12px", borderRadius: "4px", cursor: "pointer" }}>
+              Admin Login
+            </button>
+          )}
         </div>
       </header>
 
-      <div style={{ display: "flex", gap: "2rem", marginTop: "1.5rem" }}>
-        {/* Left Side Panel: Camera feed */}
-        <div style={{ flex: 1 }}>
-          <h3>Live Camera Feed</h3>
+      {/* Main Content Sections */}
+      <div style={{ marginTop: "1.5rem" }}>
+        {activeTab === "scanner" && (
+          <div style={{ maxWidth: "600px", margin: "0 auto", textAlign: "center" }}>
+            <h3>Face Scanner Kiosk</h3>
+            <p>Position your face in front of the camera to mark your attendance.</p>
+            
+            <div style={{ margin: "1rem 0" }}>
+              {!isCameraOn ? (
+                <button onClick={startCamera} style={{ padding: "10px 20px", fontSize: "16px", cursor: "pointer" }}>Start Camera</button>
+              ) : (
+                <button onClick={stopCamera} style={{ background: "#dc3545", color: "#fff", border: "none", padding: "10px 20px", fontSize: "16px", borderRadius: "4px", cursor: "pointer" }}>
+                  Stop Camera
+                </button>
+              )}
+            </div>
 
-          <div style={{ display: "flex", gap: "10px", marginBottom: "0.5rem" }}>
-            {!isCameraOn ? (
-              <button onClick={startCamera}>Start Camera</button>
-            ) : (
-              <button onClick={stopCamera} style={{ background: "#dc3545", color: "#fff", border: "none", padding: "6px 12px", borderRadius: "4px", cursor: "pointer" }}>
-                Stop Camera
+            <div style={{ margin: "1rem 0" }}>
+              <video ref={videoRef} autoPlay playsInline style={{ width: "100%", maxWidth: "500px", height: "350px", background: "#000", borderRadius: "8px" }} />
+            </div>
+
+            <div style={{ margin: "1rem 0" }}>
+              <label style={{ display: "inline-flex", alignItems: "center", cursor: "pointer", fontSize: "16px" }}>
+                <input
+                  type="checkbox"
+                  checked={autoScan}
+                  disabled={!isCameraOn}
+                  onChange={(e) => setAutoScan(e.target.checked)}
+                  style={{ transform: "scale(1.2)", marginRight: "8px" }}
+                />
+                Auto-scan every 3 seconds
+              </label>
+            </div>
+
+            <canvas ref={canvasRef} style={{ display: "none" }} />
+            <p style={{ fontSize: "18px", marginTop: "1rem" }}><strong>Status:</strong> {status}</p>
+          </div>
+        )}
+
+        {activeTab === "logs" && (
+          <div>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
+              <h3>Attendance Logs</h3>
+              <button onClick={handleExportCSV} style={{ background: "#28a745", color: "#fff", border: "none", padding: "8px 12px", borderRadius: "4px", cursor: "pointer" }}>
+                Export CSV
               </button>
+            </div>
+            <table border="1" cellPadding="8" style={{ width: "100%", borderCollapse: "collapse" }}>
+              <thead>
+                <tr style={{ background: "#f5f5f5" }}>
+                  <th>Student ID</th>
+                  <th>Name</th>
+                  <th>Timestamp</th>
+                </tr>
+              </thead>
+              <tbody>
+                {logs.length === 0 ? (
+                  <tr><td colSpan="3" style={{ textAlign: "center" }}>No logs recorded yet.</td></tr>
+                ) : (
+                  logs.map((log) => (
+                    <tr key={log.id}>
+                      <td>{log.student_id}</td>
+                      <td>{log.name}</td>
+                      <td>{new Date(log.timestamp).toLocaleString()}</td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {activeTab === "reports" && (
+          <AttendanceReport token={token} />
+        )}
+
+        {activeTab === "register" && (
+          <div>
+            {!token ? (
+              <div style={{ maxWidth: "400px", margin: "2rem auto", textAlign: "center" }}>
+                <h3>Admin Authentication Required</h3>
+                <p>Please log in with admin credentials to register new students.</p>
+                <Login onLoginSuccess={(newToken) => { setToken(newToken); }} />
+              </div>
+            ) : (
+              <RegisterStudent token={token} onStudentRegistered={fetchLogs} />
             )}
           </div>
-
-          <div style={{ margin: "0.5rem 0" }}>
-            <video ref={videoRef} autoPlay playsInline style={{ width: "100%", height: "260px", background: "#000", borderRadius: "8px" }} />
-          </div>
-
-          <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
-            <label style={{ display: "flex", alignItems: "center", cursor: "pointer" }}>
-              <input
-                type="checkbox"
-                checked={autoScan}
-                disabled={!isCameraOn}
-                onChange={(e) => setAutoScan(e.target.checked)}
-              />
-              <span style={{ marginLeft: "6px" }}>Auto-scan every 3 seconds</span>
-            </label>
-          </div>
-
-          <canvas ref={canvasRef} style={{ display: "none" }} />
-          <p><strong>Status:</strong> {status}</p>
-        </div>
-
-        {/* Right Side Panel: Active View */}
-        <div style={{ flex: 1 }}>
-          {activeTab === "register" && (
-            <RegisterStudent token={token} onStudentRegistered={fetchLogs} />
-          )}
-
-          {activeTab === "reports" && (
-            <AttendanceReport token={token} />
-          )}
-
-          {activeTab === "logs" && (
-            <div>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
-                <h3>Attendance Logs</h3>
-                <button onClick={handleExportCSV} style={{ background: "#28a745", color: "#fff", border: "none", padding: "8px 12px", borderRadius: "4px", cursor: "pointer" }}>
-                  Export CSV
-                </button>
-              </div>
-              <table border="1" cellPadding="8" style={{ width: "100%", borderCollapse: "collapse" }}>
-                <thead>
-                  <tr style={{ background: "#f5f5f5" }}>
-                    <th>Student ID</th>
-                    <th>Name</th>
-                    <th>Timestamp</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {logs.length === 0 ? (
-                    <tr><td colSpan="3" style={{ textAlign: "center" }}>No logs recorded yet.</td></tr>
-                  ) : (
-                    logs.map((log) => (
-                      <tr key={log.id}>
-                        <td>{log.student_id}</td>
-                        <td>{log.name}</td>
-                        <td>{new Date(log.timestamp).toLocaleString()}</td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
+        )}
       </div>
     </div>
   );
