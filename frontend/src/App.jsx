@@ -211,12 +211,12 @@ export default function App() {
         {activeTab === "logs" && (
           <div>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
-              <h3>Attendance Logs</h3>
+              <h3 style={{ color: "#fff" }}>Attendance Logs</h3>
               <button onClick={handleExportCSV} style={{ background: "#28a745", color: "#fff", border: "none", padding: "8px 12px", borderRadius: "4px", cursor: "pointer" }}>
                 Export CSV
               </button>
             </div>
-            <table border="1" cellPadding="8" style={{ width: "100%", borderCollapse: "collapse" }}>
+            <table border="1" cellPadding="8" style={{ width: "100%", borderCollapse: "collapse", background: "#fff", color: "#000" }}>
               <thead>
                 <tr style={{ background: "#f5f5f5" }}>
                   <th>Student ID</th>
@@ -225,14 +225,14 @@ export default function App() {
                 </tr>
               </thead>
               <tbody>
-                {logs.length === 0 ? (
+                {!Array.isArray(logs) || logs.length === 0 ? (
                   <tr><td colSpan="3" style={{ textAlign: "center" }}>No logs recorded yet.</td></tr>
                 ) : (
                   logs.map((log) => (
-                    <tr key={log.id}>
+                    <tr key={log.id || Math.random()}>
                       <td>{log.student_id}</td>
                       <td>{log.name}</td>
-                      <td>{new Date(log.timestamp).toLocaleString()}</td>
+                      <td>{log.timestamp ? new Date(log.timestamp).toLocaleString() : "N/A"}</td>
                     </tr>
                   ))
                 )}
