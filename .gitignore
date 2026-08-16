@@ -1,0 +1,19 @@
+# Node dependencies
+node_modules/
+frontend/node_modules/
+
+# Python Virtual Environments
+venv/
+.venv/
+backend/venv/
+__pycache__/
+*.pyc
+
+# Local Databases & Secrets
+*.db
+backend/test.db
+.env
+
+# Build outputs
+frontend/dist/
+frontend/build/
