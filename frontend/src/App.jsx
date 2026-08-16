@@ -96,10 +96,16 @@ export default function App() {
     const video = videoRef.current;
     if (video.readyState !== 4) return;
 
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    canvas.getContext("2d").drawImage(video, 0, 0);
+    // Resize image to a maximum width of 640px to prevent mobile payload overload
+    const maxWidth = 640;
+    const scale = maxWidth / video.videoWidth;
+    canvas.width = maxWidth;
+    canvas.height = video.videoHeight * scale;
 
+    const ctx = canvas.getContext("2d");
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+    // Convert to JPEG with 80% quality compression
     canvas.toBlob(async (blob) => {
       if (!blob) return;
       const formData = new FormData();
@@ -124,9 +130,8 @@ export default function App() {
       } catch (err) {
         setStatus("Network / Server error.");
       }
-    }, "image/jpeg");
+    }, "image/jpeg", 0.8);
   };
-
   return (
     <div style={{ padding: "2rem", fontFamily: "sans-serif", maxWidth: "1200px", margin: "0 auto" }}>
       <header style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "2px solid #eee", paddingBottom: "1rem" }}>
