@@ -23,4 +23,5 @@ COPY . .
 
 ENV PYTHONPATH=/app
 
-CMD uvicorn backend.app.main:app --host 0.0.0.0 --port ${PORT:-8000}
+# Updated import path to app.main:app
+CMD uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}
