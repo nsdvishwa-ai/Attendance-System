@@ -116,12 +116,11 @@ async def mark_attendance(
     }
 
 @app.get("/admin/logs")
-def get_attendance_logs(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+def get_attendance_logs(db: Session = Depends(get_db)):  # Removed current_user dependency
     logs = db.query(AttendanceLog, Student.name).join(Student, AttendanceLog.student_id == Student.student_id).order_by(AttendanceLog.timestamp.desc()).all()
     
     result = []
     for log in logs:
-        # Convert stored naive UTC timestamp to IST (+5:30)
         utc_dt = log.AttendanceLog.timestamp.replace(tzinfo=timezone.utc)
         ist_dt = utc_dt.astimezone(IST)
         
@@ -132,12 +131,11 @@ def get_attendance_logs(current_user: User = Depends(get_current_user), db: Sess
             "timestamp": ist_dt.isoformat()
         })
         
-    return result
+    return result   
 
 @app.get("/admin/export-csv")
 def export_attendance_csv(
-    current_user: User = Depends(get_current_user), 
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db)  # Removed current_user dependency
 ):
     logs = db.query(AttendanceLog, Student.name).join(Student, AttendanceLog.student_id == Student.student_id).order_by(AttendanceLog.timestamp.desc()).all()
 
@@ -146,14 +144,13 @@ def export_attendance_csv(
     writer.writerow(["Log ID", "Student ID", "Student Name", "Timestamp (IST)"])
 
     for log in logs:
-        # Convert UTC timestamp to IST (+5:30) for CSV output
         utc_dt = log.AttendanceLog.timestamp.replace(tzinfo=timezone.utc)
         ist_dt = utc_dt.astimezone(IST)
         
         writer.writerow([
             log.AttendanceLog.id,
             log.AttendanceLog.student_id,
-            log.name,
+            log.AttendanceLog.name,
             ist_dt.strftime("%Y-%m-%d %H:%M:%S")
         ])
 
@@ -163,7 +160,6 @@ def export_attendance_csv(
         media_type="text/csv",
         headers={"Content-Disposition": "attachment; filename=attendance_report.csv"}
     )
-
 # Add this endpoint in backend/main.py
 @app.post("/verify-admin-password")
 def verify_admin_password(
@@ -253,8 +249,7 @@ def get_attendance_report(
     start_date: str = None,
     end_date: str = None,
     student_id: str = None,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    db: Session = Depends(get_db)  # Removed current_user dependency
 ):
     try:
         total_students = db.query(Student).count()
@@ -317,10 +312,9 @@ def export_attendance_csv(
     start_date: str = None,
     end_date: str = None,
     student_id: str = None,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    db: Session = Depends(get_db)  # Removed current_user dependency
 ):
-    report_data = get_attendance_report(start_date, end_date, student_id, db, current_user)
+    report_data = get_attendance_report(start_date, end_date, student_id, db)
     logs = report_data["logs"]
 
     output = io.StringIO()
